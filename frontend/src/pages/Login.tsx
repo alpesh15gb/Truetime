@@ -1,9 +1,14 @@
 import { isAxiosError } from "axios";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
-import { createInitialAdmin, fetchSetupStatus } from "../lib/api";
+import {
+  createInitialAdmin,
+  fetchSetupStatus,
+  getApiBaseUrl,
+  setApiBaseUrl
+} from "../lib/api";
 
 interface SetupFormState {
   email: string;
@@ -31,30 +36,31 @@ export const LoginPage = () => {
   });
   const [setupError, setSetupError] = useState<string | null>(null);
   const [setupSubmitting, setSetupSubmitting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [apiUrl, setApiUrl] = useState<string>(() => getApiBaseUrl());
+  const [apiConfigMessage, setApiConfigMessage] = useState<string | null>(null);
+
+  const loadSetupStatus = useCallback(async () => {
+    setCheckingSetup(true);
+    try {
+      const status = await fetchSetupStatus();
+      setSetupRequired(!status.has_users);
+      setStatusError(null);
+      return true;
+    } catch (err) {
+      setStatusError(
+        "Unable to reach the Truetime API. Confirm the backend URL below and try again."
+      );
+      setShowAdvanced(true);
+      return false;
+    } finally {
+      setCheckingSetup(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    fetchSetupStatus()
-      .then((status) => {
-        if (!active) {
-          return;
-        }
-        setSetupRequired(!status.has_users);
-        setCheckingSetup(false);
-        setStatusError(null);
-      })
-      .catch(() => {
-        if (!active) {
-          return;
-        }
-        setStatusError("Unable to determine system status. Please try again.");
-        setCheckingSetup(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+    void loadSetupStatus();
+  }, [loadSetupStatus]);
 
   if (user && !loading) {
     return <Navigate to="/" replace />;
@@ -119,6 +125,10 @@ export const LoginPage = () => {
         } else if (status === 404) {
           setSetupError(
             "The Truetime API was not found at this address. Update VITE_API_BASE_URL (or your Vercel rewrite) to point at the backend."
+          );
+        } else if (status === 405) {
+          setSetupError(
+            "The Truetime API rejected this request (405). Ensure your backend exposes POST /api/auth/initial-admin and that this app points to the correct base URL."
           );
         } else if (typeof err.response?.data?.detail === "string") {
           setSetupError(err.response.data.detail);
@@ -222,6 +232,75 @@ export const LoginPage = () => {
               {setupSubmitting || loading ? "Creating administrator…" : "Create administrator"}
             </button>
           </form>
+          <div className="mt-8 border-t border-slate-200 pt-6 text-sm text-slate-500">
+            <button
+              type="button"
+              className="text-primary transition hover:text-primary-dark"
+              onClick={() => setShowAdvanced((prev) => !prev)}
+            >
+              {showAdvanced ? "Hide backend settings" : "Can't reach your API? Configure backend URL"}
+            </button>
+            {showAdvanced ? (
+              <form
+                className="mt-4 space-y-4 rounded-2xl border border-slate-200 p-4"
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  setApiConfigMessage(null);
+                  const nextUrl = setApiBaseUrl(apiUrl);
+                  setApiUrl(nextUrl);
+                  const success = await loadSetupStatus();
+                  setApiConfigMessage(
+                    success
+                      ? "Backend URL saved. Try creating the administrator again."
+                      : "Still unable to reach the API. Check the address and network access."
+                  );
+                }}
+              >
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-600" htmlFor="api-url">
+                    Backend API URL
+                  </label>
+                  <input
+                    id="api-url"
+                    type="url"
+                    required
+                    value={apiUrl}
+                    onChange={(event) => setApiUrl(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder="https://your-backend.example.com/api"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+                  >
+                    Save backend URL
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-slate-400 hover:text-slate-700"
+                    onClick={async () => {
+                      setApiConfigMessage(null);
+                      const nextUrl = setApiBaseUrl(null);
+                      setApiUrl(nextUrl);
+                      const success = await loadSetupStatus();
+                      setApiConfigMessage(
+                        success
+                          ? "Backend URL reset to default."
+                          : "Still unable to reach the API after reset."
+                      );
+                    }}
+                  >
+                    Reset to default
+                  </button>
+                </div>
+                {apiConfigMessage ? (
+                  <p className="text-sm text-slate-600">{apiConfigMessage}</p>
+                ) : null}
+              </form>
+            ) : null}
+          </div>
           <p className="mt-6 text-center text-xs text-slate-400">
             Already have an account?{' '}
             <button

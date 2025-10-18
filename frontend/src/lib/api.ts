@@ -25,22 +25,46 @@ import type {
   SetupStatus
 } from "../types";
 
+const STORAGE_KEY = "truetime.apiBaseUrl";
+
 const sanitizeBaseUrl = (url: string): string => url.replace(/\/$/, "");
 
-const resolveBaseUrl = (): string => {
+const getWindow = (): Window | null =>
+  typeof window === "undefined" ? null : window;
+
+const resolveDefaultBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim().length > 0) {
     return sanitizeBaseUrl(envUrl);
   }
 
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return `${sanitizeBaseUrl(window.location.origin)}/api`;
+  const win = getWindow();
+  if (win?.location?.origin) {
+    return `${sanitizeBaseUrl(win.location.origin)}/api`;
   }
 
   return "http://localhost:8000/api";
 };
 
-const baseURL = resolveBaseUrl();
+const resolveStoredBaseUrl = (): string | null => {
+  const win = getWindow();
+  if (!win) {
+    return null;
+  }
+
+  try {
+    const stored = win.localStorage.getItem(STORAGE_KEY);
+    if (stored && stored.trim().length > 0) {
+      return sanitizeBaseUrl(stored);
+    }
+  } catch (error) {
+    console.warn("Unable to read stored Truetime API base URL", error);
+  }
+
+  return null;
+};
+
+let baseURL = resolveStoredBaseUrl() ?? resolveDefaultBaseUrl();
 
 let authToken: string | null = null;
 
@@ -48,6 +72,34 @@ export const apiClient = axios.create({
   baseURL,
   timeout: 15000
 });
+
+const applyBaseUrl = (url: string) => {
+  baseURL = url;
+  apiClient.defaults.baseURL = url;
+};
+
+export const getApiBaseUrl = (): string => baseURL;
+
+export const setApiBaseUrl = (url: string | null): string => {
+  const sanitized = url && url.trim().length > 0 ? sanitizeBaseUrl(url) : null;
+  const win = getWindow();
+
+  if (win) {
+    try {
+      if (sanitized) {
+        win.localStorage.setItem(STORAGE_KEY, sanitized);
+      } else {
+        win.localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.warn("Unable to persist Truetime API base URL", error);
+    }
+  }
+
+  const nextUrl = sanitized ?? resolveDefaultBaseUrl();
+  applyBaseUrl(nextUrl);
+  return nextUrl;
+};
 
 apiClient.interceptors.request.use((config) => {
   if (authToken) {
