@@ -174,7 +174,7 @@ All endpoints (except the token endpoint) require a Bearer token issued by `POST
 
 ### Authentication & RBAC
 
-1. The hosted login page now detects whether any users exist. On a fresh installation, it will prompt you to create the first administrator directly from the browser. If the SPA cannot reach your API (for example, when VITE_API_BASE_URL is missing), expand the “Configure backend URL” panel to point the UI at the correct domain and retry the bootstrap. Enter just the root of your backend host (for example `https://attendance.example.com`)—Truetime normalizes it to the `/api` endpoint automatically. After the admin is created you can provision additional accounts from the `/admin` console.
+1. The hosted login page now detects whether any users exist. On a fresh installation, it will prompt you to create the first administrator directly from the browser. If the SPA cannot reach your API (for example, when VITE_API_BASE_URL is missing), expand the “Configure backend URL” panel to point the UI at the correct domain and retry the bootstrap. Enter the root of your backend host (for example `https://attendance.example.com` or `https://attendance.example.com/truetime`)—Truetime appends `/api` to that path automatically without stripping intermediate segments. After the admin is created you can provision additional accounts from the `/admin` console.
 
 2. Alternatively, you can still seed an account via CLI if you prefer:
 
@@ -229,7 +229,7 @@ By default the UI expects the API to run at `http://localhost:8000/api`. For pro
 The root `package.json` is now an npm workspace that owns the `frontend/` app. Vercel installs dependencies from the workspace-aware `package-lock.json` and runs `npm run build`, which delegates to `vite build` inside `frontend/`. Thanks to the bundled `vercel.json`, you can accept the default project settings in the Vercel UI:
 
 1. **Create the project** – Point Vercel at this repo without overriding the root directory. The default `npm install`/`npm run build` commands will hydrate the workspace and emit the production bundle to `frontend/dist`.
-2. **Expose the API URL** – In the Vercel dashboard add `VITE_API_BASE_URL=https://<your-backend-domain>` (Truetime appends `/api` automatically) or configure a rewrite in the dashboard that forwards `/api/*` to your backend. If you forget this step you can still update the base URL from the login screen’s “Configure backend URL” drawer, but wiring the environment variable keeps deployments hands-free.
+2. **Expose the API URL** – In the Vercel dashboard add `VITE_API_BASE_URL=https://<your-backend-domain>` (Truetime appends `/api` automatically and preserves any additional path segments, e.g. `/truetime/api`) or configure a rewrite in the dashboard that forwards `/api/*` to your backend. If you forget this step you can still update the base URL from the login screen’s “Configure backend URL” drawer, but wiring the environment variable keeps deployments hands-free.
 3. **Redeploy** – Trigger a deploy. The generated static assets are served directly from `frontend/dist`, matching the paths the SPA expects.
 
 These defaults align with the local build command (`npm run build`) and the CI workflow so you get identical production artifacts.

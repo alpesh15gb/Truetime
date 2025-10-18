@@ -32,12 +32,16 @@ const sanitizeBaseUrl = (url: string): string => url.replace(/\/$/, "");
 const ensureApiPath = (url: string): string => {
   try {
     const parsed = new URL(url);
-    if (!parsed.pathname || parsed.pathname === "/") {
+    const trimmedPath = parsed.pathname.replace(/\/+$/, "");
+
+    if (!trimmedPath || trimmedPath === "/") {
       parsed.pathname = "/api";
-    } else if (!parsed.pathname.startsWith("/api")) {
-      parsed.pathname = "/api";
-    } else if (parsed.pathname !== "/api") {
-      parsed.pathname = "/api";
+    } else if (trimmedPath.endsWith("/api")) {
+      parsed.pathname = trimmedPath;
+    } else if (trimmedPath.includes("/api/")) {
+      parsed.pathname = trimmedPath;
+    } else {
+      parsed.pathname = `${trimmedPath}/api`;
     }
     parsed.search = "";
     parsed.hash = "";
