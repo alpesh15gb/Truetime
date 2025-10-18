@@ -153,7 +153,7 @@ All endpoints (except the token endpoint) require a Bearer token issued by `POST
 
 - `POST /api/auth/token` – exchange email/password credentials for a JWT access token.
 - `GET /api/auth/setup-status` – check whether any accounts exist (used for the onboarding flow).
-- `POST /api/auth/initial-admin` – create the first administrator account when no users exist yet.
+- `POST /api/auth/initial-admin` – create the first administrator account when no users exist yet. JSON and `application/x-www-form-urlencoded` payloads are accepted so the browser bootstrap flow can succeed even when preflight requests are blocked by upstream proxies.
 - `GET /api/users/me` – fetch the authenticated user’s profile.
 - `POST /api/users` – create a new user (admin/manager only).
 - `GET /api/users` – list users (admin only).

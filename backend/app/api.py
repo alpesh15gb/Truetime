@@ -3,13 +3,14 @@ from __future__ import annotations
 import asyncio
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from alembic import command
 from alembic.config import Config
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import ValidationError
 
 from . import auth, crud, ingestion, schemas
 from .config import get_settings
@@ -40,9 +41,27 @@ async def get_setup_status(session: AsyncSession = Depends(get_session)) -> sche
     status_code=status.HTTP_201_CREATED,
 )
 async def create_initial_admin(
-    payload: schemas.InitialAdminCreate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> schemas.TokenResponse:
+    try:
+        if "application/x-www-form-urlencoded" in request.headers.get("content-type", ""):
+            form = await request.form()
+            payload_data: dict[str, Any] = {
+                "email": form.get("email"),
+                "full_name": form.get("full_name"),
+                "password": form.get("password"),
+            }
+        else:
+            payload_data = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload") from exc
+
+    try:
+        payload = schemas.InitialAdminCreate.model_validate(payload_data)
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid payload") from exc
+
     try:
         user = await crud.create_initial_admin(session, payload)
     except crud.OperationNotAllowed as exc:

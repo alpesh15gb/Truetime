@@ -156,7 +156,13 @@ export const fetchSetupStatus = async (): Promise<SetupStatus> => {
 export const createInitialAdmin = async (
   payload: InitialAdminPayload
 ): Promise<TokenResponse> => {
-  const { data } = await apiClient.post<TokenResponse>("/auth/initial-admin", payload);
+  const form = new URLSearchParams();
+  form.append("email", payload.email);
+  form.append("full_name", payload.full_name);
+  form.append("password", payload.password);
+  const { data } = await apiClient.post<TokenResponse>("/auth/initial-admin", form, {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+  });
   return data;
 };
 

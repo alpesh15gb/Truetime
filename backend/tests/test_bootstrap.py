@@ -30,3 +30,22 @@ async def test_initial_admin_bootstrap_flow(bootstrap_client: AsyncClient) -> No
     status_after = await bootstrap_client.get("/api/auth/setup-status")
     assert status_after.status_code == 200
     assert status_after.json()["has_users"] is True
+
+
+@pytest.mark.asyncio
+async def test_initial_admin_accepts_form_payload(bootstrap_client: AsyncClient) -> None:
+    payload = {
+        "email": "bootstrap@example.com",
+        "full_name": "Bootstrap Admin",
+        "password": "form-secret",
+    }
+
+    response = await bootstrap_client.post(
+        "/api/auth/initial-admin",
+        data=payload,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["access_token"]
+    assert body["token_type"] == "bearer"
