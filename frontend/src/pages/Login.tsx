@@ -93,9 +93,19 @@ export const LoginPage = () => {
         full_name: setupForm.fullName,
         password: setupForm.password
       });
-      await establishWithToken(response.access_token);
-      setSetupRequired(false);
-      navigate("/admin", { replace: true });
+
+      try {
+        await establishWithToken(response.access_token);
+        setSetupRequired(false);
+        navigate("/admin", { replace: true });
+        return;
+      } catch (authError) {
+        console.warn("Unable to auto-establish session after admin bootstrap", authError);
+        setSetupRequired(false);
+        setFormState({ email: setupForm.email, password: setupForm.password });
+        setError("Administrator created. Please sign in with the same credentials.");
+        return;
+      }
     } catch (err) {
       if (isAxiosError(err)) {
         if (err.response?.status === 409) {
@@ -103,6 +113,10 @@ export const LoginPage = () => {
           setSetupRequired(false);
         } else if (typeof err.response?.data?.detail === "string") {
           setSetupError(err.response.data.detail);
+        } else if (!err.response) {
+          setSetupError(
+            "Unable to reach the Truetime API. Confirm your deployment URL and try again."
+          );
         } else {
           setSetupError("Unable to create administrator. Please try again.");
         }
