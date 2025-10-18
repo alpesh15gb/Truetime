@@ -14,7 +14,7 @@ interface SetupFormState {
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, user, loading } = useAuth();
+  const { login, establishWithToken, user, loading } = useAuth();
 
   const [checkingSetup, setCheckingSetup] = useState(true);
   const [setupRequired, setSetupRequired] = useState(false);
@@ -88,17 +88,24 @@ export const LoginPage = () => {
     }
     setSetupSubmitting(true);
     try {
-      await createInitialAdmin({
+      const response = await createInitialAdmin({
         email: setupForm.email,
         full_name: setupForm.fullName,
         password: setupForm.password
       });
-      await login({ email: setupForm.email, password: setupForm.password });
+      await establishWithToken(response.access_token);
+      setSetupRequired(false);
       navigate("/admin", { replace: true });
     } catch (err) {
-      if (isAxiosError(err) && err.response?.status === 409) {
-        setSetupError("An administrator already exists. Please sign in instead.");
-        setSetupRequired(false);
+      if (isAxiosError(err)) {
+        if (err.response?.status === 409) {
+          setSetupError("An administrator already exists. Please sign in instead.");
+          setSetupRequired(false);
+        } else if (typeof err.response?.data?.detail === "string") {
+          setSetupError(err.response.data.detail);
+        } else {
+          setSetupError("Unable to create administrator. Please try again.");
+        }
       } else {
         setSetupError("Unable to create administrator. Please try again.");
       }
