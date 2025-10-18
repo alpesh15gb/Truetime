@@ -168,6 +168,16 @@ class TokenPayload(BaseModel):
     role: UserRole
 
 
+class SetupStatus(BaseModel):
+    has_users: bool
+
+
+class InitialAdminCreate(BaseModel):
+    email: str
+    full_name: str
+    password: str
+
+
 class LoginRequest(BaseModel):
     email: str
     password: str

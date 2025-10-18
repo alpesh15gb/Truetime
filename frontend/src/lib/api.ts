@@ -9,6 +9,7 @@ import type {
   Employee,
   EmployeeCreate,
   LoginPayload,
+  InitialAdminPayload,
   PaginatedResponse,
   Shift,
   ShiftAssignment,
@@ -20,7 +21,8 @@ import type {
   SystemConfig,
   SystemConfigUpdate,
   SqlQueryPayload,
-  SqlQueryResult
+  SqlQueryResult,
+  SetupStatus
 } from "../types";
 
 const sanitizeBaseUrl = (url: string): string => url.replace(/\/$/, "");
@@ -72,6 +74,18 @@ export const loginRequest = async (credentials: LoginPayload): Promise<TokenResp
   const { data } = await apiClient.post<TokenResponse>("/auth/token", params, {
     headers: { "Content-Type": "application/x-www-form-urlencoded" }
   });
+  return data;
+};
+
+export const fetchSetupStatus = async (): Promise<SetupStatus> => {
+  const { data } = await apiClient.get<SetupStatus>("/auth/setup-status");
+  return data;
+};
+
+export const createInitialAdmin = async (
+  payload: InitialAdminPayload
+): Promise<TokenResponse> => {
+  const { data } = await apiClient.post<TokenResponse>("/auth/initial-admin", payload);
   return data;
 };
 

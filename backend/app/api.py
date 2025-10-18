@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -12,8 +12,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import auth, crud, ingestion, schemas
+from .config import get_settings
 from .db import get_session
 from .enums import UserRole
+from .security import create_access_token
 
 router = APIRouter()
 
@@ -24,6 +26,35 @@ async def login(
     session: AsyncSession = Depends(get_session),
 ):
     return await auth.login_for_access_token(form_data, session)
+
+
+@router.get("/auth/setup-status", response_model=schemas.SetupStatus)
+async def get_setup_status(session: AsyncSession = Depends(get_session)) -> schemas.SetupStatus:
+    has_users = await crud.users_exist(session)
+    return schemas.SetupStatus(has_users=has_users)
+
+
+@router.post(
+    "/auth/initial-admin",
+    response_model=schemas.TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_initial_admin(
+    payload: schemas.InitialAdminCreate,
+    session: AsyncSession = Depends(get_session),
+) -> schemas.TokenResponse:
+    try:
+        user = await crud.create_initial_admin(session, payload)
+    except crud.OperationNotAllowed as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except crud.DuplicateError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    settings = get_settings()
+    expires = timedelta(minutes=settings.access_token_expire_minutes)
+    role_value = user.role.value if hasattr(user.role, "value") else user.role
+    token = create_access_token({"sub": user.email, "role": role_value}, expires)
+    return schemas.TokenResponse(access_token=token)
 
 
 @router.post(

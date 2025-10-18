@@ -26,6 +26,10 @@ class NotFoundError(CRUDException):
     pass
 
 
+class OperationNotAllowed(CRUDException):
+    pass
+
+
 async def create_employee(session: AsyncSession, payload: schemas.EmployeeCreate) -> models.Employee:
     employee = models.Employee(**payload.model_dump())
     session.add(employee)
@@ -437,6 +441,26 @@ async def create_user(session: AsyncSession, payload: schemas.UserCreate) -> mod
         raise DuplicateError("User with this email already exists") from exc
     await session.refresh(user)
     return user
+
+
+async def users_exist(session: AsyncSession) -> bool:
+    result = await session.execute(select(func.count(models.User.id)))
+    return result.scalar_one() > 0
+
+
+async def create_initial_admin(
+    session: AsyncSession, payload: schemas.InitialAdminCreate
+) -> models.User:
+    if await users_exist(session):
+        raise OperationNotAllowed("Initial administrator already configured")
+
+    bootstrap_payload = schemas.UserCreate(
+        email=payload.email,
+        full_name=payload.full_name,
+        password=payload.password,
+        role=UserRole.ADMIN,
+    )
+    return await create_user(session, bootstrap_payload)
 
 
 async def get_user_by_email(session: AsyncSession, email: str) -> models.User | None:

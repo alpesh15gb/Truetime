@@ -26,9 +26,19 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface InitialAdminPayload {
+  email: string;
+  full_name: string;
+  password: string;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;
+}
+
+export interface SetupStatus {
+  has_users: boolean;
 }
 
 export interface SystemConfig {

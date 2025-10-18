@@ -152,6 +152,8 @@ If `TRUETIME_AUTO_RUN_MIGRATIONS=true` is set the application will execute `alem
 All endpoints (except the token endpoint) require a Bearer token issued by `POST /api/auth/token`.
 
 - `POST /api/auth/token` – exchange email/password credentials for a JWT access token.
+- `GET /api/auth/setup-status` – check whether any accounts exist (used for the onboarding flow).
+- `POST /api/auth/initial-admin` – create the first administrator account when no users exist yet.
 - `GET /api/users/me` – fetch the authenticated user’s profile.
 - `POST /api/users` – create a new user (admin/manager only).
 - `GET /api/users` – list users (admin only).
@@ -172,13 +174,15 @@ All endpoints (except the token endpoint) require a Bearer token issued by `POST
 
 ### Authentication & RBAC
 
-1. Use the CLI helper to create your first administrative user (or, after deployment, sign in and use the Admin Console at `/admin` to provision additional accounts):
+1. The hosted login page now detects whether any users exist. On a fresh installation, it will prompt you to create the first administrator directly from the browser. After the admin is created you can provision additional accounts from the `/admin` console.
+
+2. Alternatively, you can still seed an account via CLI if you prefer:
 
    ```bash
    python -m app.cli create-user --email admin@example.com --full-name "Admin" --role admin
    ```
 
-2. Request an access token with those credentials:
+3. Request an access token with those credentials:
 
    ```bash
    curl -X POST http://localhost:8000/api/auth/token \
@@ -186,7 +190,7 @@ All endpoints (except the token endpoint) require a Bearer token issued by `POST
      -d "username=admin@example.com&password=<password>"
    ```
 
-3. Pass the returned token as `Authorization: Bearer <token>` to every other API call.
+4. Pass the returned token as `Authorization: Bearer <token>` to every other API call.
 
 ### Device Ingestion Runtime
 

@@ -75,3 +75,39 @@ async def client(test_app: FastAPI) -> AsyncGenerator[AsyncClient, None]:
         token = resp.json()["access_token"]
         client.headers.update({"Authorization": f"Bearer {token}"})
         yield client
+
+
+@pytest_asyncio.fixture
+async def bootstrap_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
+    test_database_url = "sqlite+aiosqlite:///:memory:"
+
+    async_engine = create_async_engine(test_database_url, echo=False)
+    async_session = async_sessionmaker(async_engine, expire_on_commit=False, class_=AsyncSession)
+
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
+        async with async_session() as session:
+            yield session
+
+    def override_settings() -> Settings:
+        return Settings(database_url=test_database_url, app_name="Truetime Test API")
+
+    monkeypatch.setattr("app.config.get_settings", override_settings)
+    monkeypatch.setattr(db_module, "engine", async_engine)
+    monkeypatch.setattr(db_module, "AsyncSessionLocal", async_session)
+
+    from app import main as main_module  # noqa: E402
+
+    monkeypatch.setattr(main_module, "engine", async_engine)
+
+    app = create_app()
+    app.dependency_overrides[get_session] = override_get_session
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+    await async_engine.dispose()
