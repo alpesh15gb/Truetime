@@ -218,9 +218,9 @@ By default the UI expects the API to run at `http://localhost:8000/api`. For pro
 
 #### Deploying the SPA on Vercel
 
-The repository now includes a `vercel.json` that pins the install/build commands to the `frontend/` workspace and exposes `frontend/dist` as the output directory. That means you can deploy without touching the project settings in the Vercel UI:
+The root `package.json` is now an npm workspace that owns the `frontend/` app. Vercel installs dependencies from the workspace-aware `package-lock.json` and runs `npm run build`, which delegates to `vite build` inside `frontend/`. Thanks to the bundled `vercel.json`, you can accept the default project settings in the Vercel UI:
 
-1. **Create the project** – Point Vercel at this repo and keep the default root directory. Vercel will execute the scripted install/build steps from `vercel.json`, which handle installing dependencies and running `vite build` inside `frontend/`.
+1. **Create the project** – Point Vercel at this repo without overriding the root directory. The default `npm install`/`npm run build` commands will hydrate the workspace and emit the production bundle to `frontend/dist`.
 2. **Expose the API URL** – In the Vercel dashboard add `VITE_API_BASE_URL=https://<your-backend-domain>/api` (or configure a rewrite in the dashboard that forwards `/api/*` to your backend).
 3. **Redeploy** – Trigger a deploy. The generated static assets are served directly from `frontend/dist`, matching the paths the SPA expects.
 

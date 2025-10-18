@@ -2,8 +2,10 @@
   "name": "truetime",
   "private": true,
   "version": "1.0.0",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "postinstall": "npm --prefix frontend install",
-    "build": "npm --prefix frontend run build && rm -rf dist && cp -r frontend/dist ./dist"
+    "build": "npm run build --workspace frontend"
   }
 }
