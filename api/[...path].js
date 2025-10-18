@@ -103,6 +103,21 @@ const forwardHeaders = (req) => {
 };
 
 const handler = async (req, res) => {
+  if (req.method === "OPTIONS") {
+    const origin = req.headers.origin || "*";
+    const requestHeaders =
+      req.headers["access-control-request-headers"] || "authorization,content-type";
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    );
+    res.setHeader("Access-Control-Allow-Headers", requestHeaders);
+    res.setHeader("Access-Control-Max-Age", "86400");
+    res.status(204).end();
+    return;
+  }
+
   const baseUrl = normalizeBase();
   if (!baseUrl) {
     res.status(500).json({
