@@ -29,18 +29,31 @@ const STORAGE_KEY = "truetime.apiBaseUrl";
 
 const sanitizeBaseUrl = (url: string): string => url.replace(/\/$/, "");
 
+const ensureApiPath = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.pathname || parsed.pathname === "/") {
+      parsed.pathname = "/api";
+    }
+    return sanitizeBaseUrl(parsed.toString());
+  } catch (error) {
+    console.warn("Unable to normalize Truetime API base URL", error);
+    return sanitizeBaseUrl(url);
+  }
+};
+
 const getWindow = (): Window | null =>
   typeof window === "undefined" ? null : window;
 
 const resolveDefaultBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim().length > 0) {
-    return sanitizeBaseUrl(envUrl);
+    return ensureApiPath(envUrl);
   }
 
   const win = getWindow();
   if (win?.location?.origin) {
-    return `${sanitizeBaseUrl(win.location.origin)}/api`;
+    return ensureApiPath(win.location.origin);
   }
 
   return "http://localhost:8000/api";
@@ -55,7 +68,7 @@ const resolveStoredBaseUrl = (): string | null => {
   try {
     const stored = win.localStorage.getItem(STORAGE_KEY);
     if (stored && stored.trim().length > 0) {
-      return sanitizeBaseUrl(stored);
+      return ensureApiPath(stored);
     }
   } catch (error) {
     console.warn("Unable to read stored Truetime API base URL", error);
@@ -81,7 +94,7 @@ const applyBaseUrl = (url: string) => {
 export const getApiBaseUrl = (): string => baseURL;
 
 export const setApiBaseUrl = (url: string | null): string => {
-  const sanitized = url && url.trim().length > 0 ? sanitizeBaseUrl(url) : null;
+  const sanitized = url && url.trim().length > 0 ? ensureApiPath(url) : null;
   const win = getWindow();
 
   if (win) {

@@ -174,7 +174,7 @@ All endpoints (except the token endpoint) require a Bearer token issued by `POST
 
 ### Authentication & RBAC
 
-1. The hosted login page now detects whether any users exist. On a fresh installation, it will prompt you to create the first administrator directly from the browser. If the SPA cannot reach your API (for example, when VITE_API_BASE_URL is missing), expand the “Configure backend URL” panel to point the UI at the correct domain and retry the bootstrap. After the admin is created you can provision additional accounts from the `/admin` console.
+1. The hosted login page now detects whether any users exist. On a fresh installation, it will prompt you to create the first administrator directly from the browser. If the SPA cannot reach your API (for example, when VITE_API_BASE_URL is missing), expand the “Configure backend URL” panel to point the UI at the correct domain and retry the bootstrap. You can simply enter the root of your backend host (e.g. `https://attendance.example.com`) and Truetime will append `/api` automatically. After the admin is created you can provision additional accounts from the `/admin` console.
 
 2. Alternatively, you can still seed an account via CLI if you prefer:
 
