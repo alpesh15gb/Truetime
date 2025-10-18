@@ -108,15 +108,22 @@ export const LoginPage = () => {
       }
     } catch (err) {
       if (isAxiosError(err)) {
-        if (err.response?.status === 409) {
+        const status = err.response?.status;
+        if (status === 409) {
           setSetupError("An administrator already exists. Please sign in instead.");
           setSetupRequired(false);
-        } else if (typeof err.response?.data?.detail === "string") {
-          setSetupError(err.response.data.detail);
-        } else if (!err.response) {
+        } else if (!err.response || status === 502 || status === 503 || status === 504) {
           setSetupError(
             "Unable to reach the Truetime API. Confirm your deployment URL and try again."
           );
+        } else if (status === 404) {
+          setSetupError(
+            "The Truetime API was not found at this address. Update VITE_API_BASE_URL (or your Vercel rewrite) to point at the backend."
+          );
+        } else if (typeof err.response?.data?.detail === "string") {
+          setSetupError(err.response.data.detail);
+        } else if (typeof err.response?.data === "string") {
+          setSetupError(err.response.data);
         } else {
           setSetupError("Unable to create administrator. Please try again.");
         }
