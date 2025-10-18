@@ -102,7 +102,7 @@ const forwardHeaders = (req) => {
   return headers;
 };
 
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   const baseUrl = normalizeBase();
   if (!baseUrl) {
     res.status(500).json({
@@ -152,5 +152,13 @@ module.exports = async (req, res) => {
       error:
         "Unable to reach the Truetime backend. Confirm TRUETIME_BACKEND_URL points to an accessible FastAPI deployment."
     });
+  }
+};
+
+module.exports = handler;
+module.exports.default = handler;
+module.exports.config = {
+  api: {
+    bodyParser: false
   }
 };
