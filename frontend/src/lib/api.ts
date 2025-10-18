@@ -34,7 +34,13 @@ const ensureApiPath = (url: string): string => {
     const parsed = new URL(url);
     if (!parsed.pathname || parsed.pathname === "/") {
       parsed.pathname = "/api";
+    } else if (!parsed.pathname.startsWith("/api")) {
+      parsed.pathname = "/api";
+    } else if (parsed.pathname !== "/api") {
+      parsed.pathname = "/api";
     }
+    parsed.search = "";
+    parsed.hash = "";
     return sanitizeBaseUrl(parsed.toString());
   } catch (error) {
     console.warn("Unable to normalize Truetime API base URL", error);

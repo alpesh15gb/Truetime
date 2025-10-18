@@ -281,6 +281,10 @@ export const LoginPage = () => {
                     className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                     placeholder="https://your-backend.example.com/api"
                   />
+                  <p className="mt-2 text-xs text-slate-500">
+                    Enter the root domain where the Truetime API is hosted. The app will automatically
+                    target the <code className="rounded bg-slate-100 px-1 py-0.5">/api</code> path for you.
+                  </p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <button
