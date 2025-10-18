@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { ProtectedLayout } from "./components/ProtectedLayout";
+import { RequireRole } from "./components/RequireRole";
+import { AdminPage } from "./pages/Admin";
 import { AttendancePage } from "./pages/Attendance";
 import { DashboardPage } from "./pages/Dashboard";
 import { EmployeesPage } from "./pages/Employees";
@@ -19,6 +21,14 @@ export const router = createBrowserRouter([
       { path: "summaries", element: <SummariesPage /> },
       { path: "shifts", element: <ShiftsPage /> },
       { path: "employees", element: <EmployeesPage /> },
+      {
+        path: "admin",
+        element: (
+          <RequireRole roles={["admin"]}>
+            <AdminPage />
+          </RequireRole>
+        )
+      },
       { path: "*", element: <Navigate to="/" replace /> }
     ]
   }

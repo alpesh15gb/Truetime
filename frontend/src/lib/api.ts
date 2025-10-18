@@ -15,7 +15,12 @@ import type {
   ShiftCreate,
   TokenResponse,
   User,
-  UserCreate
+  UserCreate,
+  UserUpdate,
+  SystemConfig,
+  SystemConfigUpdate,
+  SqlQueryPayload,
+  SqlQueryResult
 } from "../types";
 
 const sanitizeBaseUrl = (url: string): string => url.replace(/\/$/, "");
@@ -78,6 +83,24 @@ export const fetchCurrentUser = async (): Promise<User> => {
 export const createUser = async (payload: UserCreate): Promise<User> => {
   const { data } = await apiClient.post<User>("/users", payload);
   return data;
+};
+
+export const fetchUsers = async (): Promise<User[]> => {
+  const { data } = await apiClient.get<User[]>("/users");
+  return data;
+};
+
+export const updateUser = async (userId: number, payload: UserUpdate): Promise<User> => {
+  const { data } = await apiClient.patch<User>(`/users/${userId}`, payload);
+  return data;
+};
+
+export const updateUserPassword = async (userId: number, password: string): Promise<void> => {
+  await apiClient.post(`/users/${userId}/password`, { password });
+};
+
+export const deleteUser = async (userId: number): Promise<void> => {
+  await apiClient.delete(`/users/${userId}`);
 };
 
 export const fetchEmployees = async (): Promise<Employee[]> => {
@@ -157,5 +180,28 @@ export const fetchAttendanceSummaries = async (
   params: { day?: string } = {}
 ): Promise<AttendanceSummary[]> => {
   const { data } = await apiClient.get<AttendanceSummary[]>("/attendance/summaries", { params });
+  return data;
+};
+
+export const fetchSystemConfig = async (): Promise<SystemConfig> => {
+  const { data } = await apiClient.get<SystemConfig>("/admin/system/config");
+  return data;
+};
+
+export const updateSystemConfig = async (
+  payload: SystemConfigUpdate
+): Promise<SystemConfig> => {
+  const { data } = await apiClient.patch<SystemConfig>("/admin/system/config", payload);
+  return data;
+};
+
+export const runMigrations = async (): Promise<void> => {
+  await apiClient.post("/admin/run-migrations", {});
+};
+
+export const executeSql = async (
+  payload: SqlQueryPayload
+): Promise<SqlQueryResult> => {
+  const { data } = await apiClient.post<SqlQueryResult>("/admin/sql", payload);
   return data;
 };

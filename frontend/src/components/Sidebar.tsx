@@ -6,6 +6,7 @@ import {
   CalendarDaysIcon,
   ClockIcon,
   HomeIcon,
+  ShieldCheckIcon,
   UserGroupIcon
 } from "@heroicons/react/24/outline";
 import { NavLink } from "react-router-dom";
@@ -19,7 +20,7 @@ export interface NavigationItem {
   icon: (props: React.ComponentProps<"svg">) => JSX.Element;
 }
 
-export const navigationItems: NavigationItem[] = [
+const baseNavigationItems: NavigationItem[] = [
   { name: "Dashboard", to: "/", icon: HomeIcon },
   { name: "Attendance Logs", to: "/attendance", icon: ClockIcon },
   { name: "Daily Summary", to: "/summaries", icon: CalendarDaysIcon },
@@ -32,9 +33,9 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-const NavigationLinks = () => (
+const NavigationLinks = ({ items }: { items: NavigationItem[] }) => (
   <nav className="mt-8 flex flex-1 flex-col gap-1">
-    {navigationItems.map((item) => (
+    {items.map((item) => (
       <NavLink
         key={item.name}
         to={item.to}
@@ -56,6 +57,16 @@ const NavigationLinks = () => (
 
 export const Sidebar = ({ open = false, onClose }: SidebarProps) => {
   const { user, logout } = useAuth();
+
+  const items = React.useMemo(() => {
+    if (user?.role === "admin") {
+      return [
+        ...baseNavigationItems,
+        { name: "Admin Console", to: "/admin", icon: ShieldCheckIcon }
+      ];
+    }
+    return baseNavigationItems;
+  }, [user]);
 
   return (
     <>
@@ -94,7 +105,7 @@ export const Sidebar = ({ open = false, onClose }: SidebarProps) => {
                     <ArrowLeftOnRectangleIcon className="h-5 w-5" />
                   </button>
                 </div>
-                <NavigationLinks />
+                <NavigationLinks items={items} />
                 <div className="mt-auto space-y-4 border-t border-white/20 pt-6 text-sm text-white/80">
                   <div>
                     <p className="font-semibold text-white">{user?.full_name ?? ""}</p>
@@ -125,7 +136,7 @@ export const Sidebar = ({ open = false, onClose }: SidebarProps) => {
             Monitor workforce presence in real-time.
           </p>
         </div>
-        <NavigationLinks />
+        <NavigationLinks items={items} />
         <div className="mt-auto space-y-4 rounded-2xl bg-white/5 p-4 text-sm text-slate-200">
           <div>
             <p className="font-semibold text-white">{user?.full_name ?? ""}</p>

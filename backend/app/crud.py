@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time as time_, timedelta, timezone
 from typing import Literal, Optional
 
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload
 from . import models, schemas
 from .enums import UserRole
 from .security import get_password_hash
+from .config import get_settings
 
 
 class CRUDException(Exception):
@@ -18,6 +19,10 @@ class CRUDException(Exception):
 
 
 class DuplicateError(CRUDException):
+    pass
+
+
+class NotFoundError(CRUDException):
     pass
 
 
@@ -449,3 +454,93 @@ async def get_user_by_id(session: AsyncSession, user_id: int) -> models.User | N
 async def list_users(session: AsyncSession) -> list[models.User]:
     result = await session.execute(select(models.User).order_by(models.User.email))
     return list(result.scalars().all())
+
+
+async def update_user(
+    session: AsyncSession,
+    user_id: int,
+    payload: schemas.UserUpdate,
+) -> models.User:
+    user = await get_user_by_id(session, user_id)
+    if not user:
+        raise NotFoundError("User not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if "full_name" in data and data["full_name"] is not None:
+        user.full_name = data["full_name"]
+
+    if "role" in data and data["role"] is not None:
+        role_value = data["role"].value if isinstance(data["role"], UserRole) else data["role"]
+        user.role = models.UserRoleEnum(UserRole.from_str(role_value).value)
+
+    if "is_active" in data and data["is_active"] is not None:
+        user.is_active = data["is_active"]
+
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+async def set_user_password(session: AsyncSession, user_id: int, password: str) -> None:
+    user = await get_user_by_id(session, user_id)
+    if not user:
+        raise NotFoundError("User not found")
+
+    user.hashed_password = get_password_hash(password)
+    await session.commit()
+
+
+async def delete_user(session: AsyncSession, user_id: int) -> None:
+    user = await get_user_by_id(session, user_id)
+    if not user:
+        raise NotFoundError("User not found")
+
+    await session.delete(user)
+    await session.commit()
+
+
+async def get_system_config(session: AsyncSession) -> models.SystemConfig:
+    result = await session.execute(select(models.SystemConfig).limit(1))
+    config = result.scalar_one_or_none()
+    if config:
+        return config
+
+    settings = get_settings()
+    config = models.SystemConfig(
+        id=1,
+        ingestion_enabled=settings.ingestion_enabled,
+        ingestion_poll_interval_seconds=settings.ingestion_poll_interval_seconds,
+        ingestion_connection_timeout=settings.ingestion_connection_timeout,
+        ingestion_force_udp=settings.ingestion_force_udp,
+        auto_run_migrations=settings.auto_run_migrations,
+    )
+    session.add(config)
+    await session.commit()
+    await session.refresh(config)
+    return config
+
+
+async def update_system_config(
+    session: AsyncSession,
+    payload: schemas.SystemConfigUpdate,
+) -> models.SystemConfig:
+    config = await get_system_config(session)
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(config, field, value)
+
+    await session.commit()
+    await session.refresh(config)
+    return config
+
+
+async def execute_sql(
+    session: AsyncSession,
+    statement: str,
+    parameters: dict[str, str | int | float | None],
+) -> tuple[list[str], list[list[str | int | float | None]]]:
+    result = await session.execute(text(statement), parameters)
+    rows = result.fetchall()
+    columns = list(result.keys())
+    formatted_rows = [list(row) for row in rows]
+    return columns, formatted_rows

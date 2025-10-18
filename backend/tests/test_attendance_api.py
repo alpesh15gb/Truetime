@@ -213,3 +213,68 @@ async def test_shift_assignment_and_daily_summary(client: AsyncClient) -> None:
     assert employee_summary["status"] in {"present", "late"}
     assert employee_summary["total_minutes"] >= 500
     assert employee_summary["shift"]["name"] == shift_payload["name"]
+
+
+@pytest.mark.asyncio
+async def test_admin_user_management(client: AsyncClient) -> None:
+    create_resp = await client.post(
+        "/api/users",
+        json={
+            "email": "ops@example.com",
+            "full_name": "Ops User",
+            "password": "initialpass",
+            "role": "manager",
+        },
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    user_id = create_resp.json()["id"]
+
+    update_resp = await client.patch(
+        f"/api/users/{user_id}",
+        json={"full_name": "Operations Manager", "role": "admin"},
+    )
+    assert update_resp.status_code == 200, update_resp.text
+    updated = update_resp.json()
+    assert updated["full_name"] == "Operations Manager"
+    assert updated["role"] == "admin"
+
+    password_resp = await client.post(
+        f"/api/users/{user_id}/password",
+        json={"password": "newpass123"},
+    )
+    assert password_resp.status_code == 204, password_resp.text
+
+    delete_resp = await client.delete(f"/api/users/{user_id}")
+    assert delete_resp.status_code == 204, delete_resp.text
+
+
+@pytest.mark.asyncio
+async def test_admin_system_config_and_sql_console(client: AsyncClient) -> None:
+    config_resp = await client.get("/api/admin/system/config")
+    assert config_resp.status_code == 200, config_resp.text
+    config = config_resp.json()
+    assert "ingestion_enabled" in config
+
+    update_resp = await client.patch(
+        "/api/admin/system/config",
+        json={"ingestion_enabled": True, "ingestion_poll_interval_seconds": 90},
+    )
+    assert update_resp.status_code == 200, update_resp.text
+    updated_config = update_resp.json()
+    assert updated_config["ingestion_enabled"] is True
+    assert updated_config["ingestion_poll_interval_seconds"] == 90
+
+    sql_resp = await client.post(
+        "/api/admin/sql",
+        json={"statement": "SELECT email, role FROM users ORDER BY email"},
+    )
+    assert sql_resp.status_code == 200, sql_resp.text
+    sql_data = sql_resp.json()
+    assert sql_data["columns"] == ["email", "role"]
+    assert any(row[0] == "admin@example.com" for row in sql_data["rows"])
+
+    non_select_resp = await client.post(
+        "/api/admin/sql",
+        json={"statement": "DELETE FROM users"},
+    )
+    assert non_select_resp.status_code == 400

@@ -113,3 +113,14 @@ class User(Base, TimestampMixin):
         default=UserRoleEnum.VIEWER,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class SystemConfig(Base, TimestampMixin):
+    __tablename__ = "system_config"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    ingestion_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    ingestion_poll_interval_seconds: Mapped[int] = mapped_column(Integer, default=60)
+    ingestion_connection_timeout: Mapped[int] = mapped_column(Integer, default=10)
+    ingestion_force_udp: Mapped[bool] = mapped_column(Boolean, default=False)
+    auto_run_migrations: Mapped[bool] = mapped_column(Boolean, default=False)

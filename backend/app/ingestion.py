@@ -245,13 +245,34 @@ async def run_scheduler(
     while True:
         try:
             async with session_factory() as session:
+                config = await crud.get_system_config(session)
+                poll_interval = max(
+                    config.ingestion_poll_interval_seconds or settings.ingestion_poll_interval_seconds,
+                    5,
+                )
+
+                if not config.ingestion_enabled:
+                    logger.debug(
+                        "Ingestion disabled via admin console; sleeping for %s seconds",
+                        poll_interval,
+                    )
+                    await asyncio.sleep(poll_interval)
+                    continue
+
+                runtime_settings = settings.model_copy(
+                    update={
+                        "ingestion_connection_timeout": config.ingestion_connection_timeout,
+                        "ingestion_force_udp": config.ingestion_force_udp,
+                    }
+                )
+
                 devices = await crud.list_devices(session)
                 for device in devices:
                     try:
                         client = (
                             client_factory(device)
                             if client_factory
-                            else resolve_client(device, settings=settings)
+                            else resolve_client(device, settings=runtime_settings)
                         )
                     except DeviceClientError as exc:
                         logger.warning(
@@ -263,7 +284,7 @@ async def run_scheduler(
                         continue
 
                     try:
-                        await sync_device(session, device, client=client, settings=settings)
+                        await sync_device(session, device, client=client, settings=runtime_settings)
                     except DeviceClientError as exc:
                         logger.warning(
                             "Failed to sync device %s (%s): %s",

@@ -165,10 +165,14 @@ All endpoints (except the token endpoint) require a Bearer token issued by `POST
 - `POST /api/employees/{code}/shift` – assign a shift to an employee effective from a specific date (manager/admin).
 - `GET /api/attendance/summaries` – compute daily attendance outcomes (present/late/absent) with total worked minutes.
 - `POST /api/devices/{serial}/sync` – trigger an on-demand sync cycle against a single biometric terminal (manager/admin).
+- `GET /api/admin/system/config` – fetch the runtime ingestion configuration (admin only).
+- `PATCH /api/admin/system/config` – update ingestion flags and timeouts without redeploying (admin only).
+- `POST /api/admin/run-migrations` – execute Alembic migrations from the web console (admin only).
+- `POST /api/admin/sql` – run read-only SQL statements for diagnostics (admin only).
 
 ### Authentication & RBAC
 
-1. Use the CLI helper to create your first administrative user:
+1. Use the CLI helper to create your first administrative user (or, after deployment, sign in and use the Admin Console at `/admin` to provision additional accounts):
 
    ```bash
    python -m app.cli create-user --email admin@example.com --full-name "Admin" --role admin
@@ -233,6 +237,7 @@ After signing in, the main screens available are:
 - **Daily Summary** – review present/late/absent status, totals, and lateness for any date.
 - **Shift Planner** – create shift templates and assign them to employees.
 - **Workforce Directory** – manage employees, biometric devices, and run on-demand device syncs.
+- **Admin Console** – accessible at `/admin` for provisioning users, editing ingestion settings, running migrations, and executing read-only SQL diagnostics.
 
 ### Running Tests
 ```bash

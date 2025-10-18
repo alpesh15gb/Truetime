@@ -15,6 +15,12 @@ export interface UserCreate {
   role: UserRole;
 }
 
+export interface UserUpdate {
+  full_name?: string;
+  role?: UserRole;
+  is_active?: boolean;
+}
+
 export interface LoginPayload {
   email: string;
   password: string;
@@ -23,6 +29,32 @@ export interface LoginPayload {
 export interface TokenResponse {
   access_token: string;
   token_type: string;
+}
+
+export interface SystemConfig {
+  ingestion_enabled: boolean;
+  ingestion_poll_interval_seconds: number;
+  ingestion_connection_timeout: number;
+  ingestion_force_udp: boolean;
+  auto_run_migrations: boolean;
+}
+
+export interface SystemConfigUpdate {
+  ingestion_enabled?: boolean;
+  ingestion_poll_interval_seconds?: number;
+  ingestion_connection_timeout?: number;
+  ingestion_force_udp?: boolean;
+  auto_run_migrations?: boolean;
+}
+
+export interface SqlQueryPayload {
+  statement: string;
+  parameters?: Record<string, string | number | null>;
+}
+
+export interface SqlQueryResult {
+  columns: string[];
+  rows: Array<Array<string | number | null>>;
 }
 
 export interface Employee {

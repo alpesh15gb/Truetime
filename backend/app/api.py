@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime
+from pathlib import Path
 from typing import Optional
 
+from alembic import command
+from alembic.config import Config
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,6 +48,51 @@ async def create_user(payload: schemas.UserCreate, session: AsyncSession = Depen
 async def list_users(session: AsyncSession = Depends(get_session)):
     users = await crud.list_users(session)
     return [schemas.UserRead.model_validate(user) for user in users]
+
+
+@router.patch(
+    "/users/{user_id}",
+    response_model=schemas.UserRead,
+    dependencies=[Depends(auth.require_roles(UserRole.ADMIN))],
+)
+async def update_user(
+    user_id: int,
+    payload: schemas.UserUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        user = await crud.update_user(session, user_id, payload)
+    except crud.NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return schemas.UserRead.model_validate(user)
+
+
+@router.post(
+    "/users/{user_id}/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(auth.require_roles(UserRole.ADMIN))],
+)
+async def set_user_password(
+    user_id: int,
+    payload: schemas.UserPasswordUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        await crud.set_user_password(session, user_id, payload.password)
+    except crud.NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(auth.require_roles(UserRole.ADMIN))],
+)
+async def delete_user(user_id: int, session: AsyncSession = Depends(get_session)):
+    try:
+        await crud.delete_user(session, user_id)
+    except crud.NotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
 @router.get("/users/me", response_model=schemas.UserRead)
@@ -139,6 +188,75 @@ async def list_shifts(
 ) -> list[schemas.ShiftRead]:
     shifts = await crud.list_shifts(session)
     return [schemas.ShiftRead.model_validate(shift) for shift in shifts]
+
+
+async def _run_alembic_upgrade() -> None:
+    config_path = Path(__file__).resolve().parents[1] / "alembic.ini"
+    alembic_config = Config(str(config_path))
+    command.upgrade(alembic_config, "head")
+
+
+@router.post(
+    "/admin/run-migrations",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(auth.require_roles(UserRole.ADMIN))],
+)
+async def run_migrations() -> dict[str, str]:
+    try:
+        await asyncio.to_thread(_run_alembic_upgrade)
+    except Exception as exc:  # pragma: no cover - safety net
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    return {"status": "migrated"}
+
+
+@router.get(
+    "/admin/system/config",
+    response_model=schemas.SystemConfig,
+    dependencies=[Depends(auth.require_roles(UserRole.ADMIN))],
+)
+async def read_system_config(session: AsyncSession = Depends(get_session)):
+    config = await crud.get_system_config(session)
+    return schemas.SystemConfig.model_validate(config)
+
+
+@router.patch(
+    "/admin/system/config",
+    response_model=schemas.SystemConfig,
+    dependencies=[Depends(auth.require_roles(UserRole.ADMIN))],
+)
+async def update_system_config(
+    payload: schemas.SystemConfigUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    config = await crud.update_system_config(session, payload)
+    return schemas.SystemConfig.model_validate(config)
+
+
+@router.post(
+    "/admin/sql",
+    response_model=schemas.SQLQueryResponse,
+    dependencies=[Depends(auth.require_roles(UserRole.ADMIN))],
+)
+async def execute_sql(
+    payload: schemas.SQLQueryRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    statement = payload.statement.strip()
+    if not statement:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="SQL statement cannot be empty")
+
+    if not statement.lower().startswith("select"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only SELECT statements are allowed from the admin console",
+        )
+
+    try:
+        columns, rows = await crud.execute_sql(session, statement, payload.parameters)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return schemas.SQLQueryResponse(columns=columns, rows=rows)
 
 
 @router.post(

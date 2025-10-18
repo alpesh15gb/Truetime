@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .enums import UserRole
 
@@ -148,6 +148,16 @@ class UserRead(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+
+
+class UserPasswordUpdate(BaseModel):
+    password: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -161,3 +171,31 @@ class TokenPayload(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class SystemConfig(BaseModel):
+    ingestion_enabled: bool
+    ingestion_poll_interval_seconds: int
+    ingestion_connection_timeout: int
+    ingestion_force_udp: bool
+    auto_run_migrations: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SystemConfigUpdate(BaseModel):
+    ingestion_enabled: Optional[bool] = None
+    ingestion_poll_interval_seconds: Optional[int] = None
+    ingestion_connection_timeout: Optional[int] = None
+    ingestion_force_udp: Optional[bool] = None
+    auto_run_migrations: Optional[bool] = None
+
+
+class SQLQueryRequest(BaseModel):
+    statement: str
+    parameters: dict[str, str | int | float | None] = Field(default_factory=dict)
+
+
+class SQLQueryResponse(BaseModel):
+    columns: list[str]
+    rows: list[list[str | int | float | None]]
