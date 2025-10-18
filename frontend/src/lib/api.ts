@@ -36,12 +36,21 @@ const ensureApiPath = (url: string): string => {
 
     if (!trimmedPath || trimmedPath === "/") {
       parsed.pathname = "/api";
-    } else if (trimmedPath.endsWith("/api")) {
-      parsed.pathname = trimmedPath;
-    } else if (trimmedPath.includes("/api/")) {
-      parsed.pathname = trimmedPath;
     } else {
-      parsed.pathname = `${trimmedPath}/api`;
+      const segments = trimmedPath
+        .split("/")
+        .map((segment) => segment.trim())
+        .filter((segment) => segment.length > 0);
+
+      const apiIndex = segments.findIndex((segment) => segment === "api");
+
+      if (apiIndex === -1) {
+        segments.push("api");
+        parsed.pathname = `/${segments.join("/")}`;
+      } else {
+        const leading = segments.slice(0, apiIndex + 1);
+        parsed.pathname = `/${leading.join("/")}`;
+      }
     }
     parsed.search = "";
     parsed.hash = "";
