@@ -122,13 +122,25 @@ export const LoginPage = () => {
           setSetupError(
             "Unable to reach the Truetime API. Confirm your deployment URL and try again."
           );
+          setShowAdvanced(true);
+          setApiConfigMessage(
+            "Update the backend URL below so the setup wizard can reach your Truetime API."
+          );
         } else if (status === 404) {
           setSetupError(
             "The Truetime API was not found at this address. Update VITE_API_BASE_URL (or your Vercel rewrite) to point at the backend."
           );
+          setShowAdvanced(true);
+          setApiConfigMessage(
+            "The current backend URL does not host Truetime. Provide the correct API base below."
+          );
         } else if (status === 405) {
           setSetupError(
             "The Truetime API rejected this request (405). Ensure your backend exposes POST /api/auth/initial-admin and that this app points to the correct base URL."
+          );
+          setShowAdvanced(true);
+          setApiConfigMessage(
+            "Verify the backend URL below. The request hit a server that does not allow POST /api/auth/initial-admin."
           );
         } else if (typeof err.response?.data?.detail === "string") {
           setSetupError(err.response.data.detail);
