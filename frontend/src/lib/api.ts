@@ -20,6 +20,15 @@ import type {
 
 const sanitizeBaseUrl = (url: string): string => url.replace(/\/$/, "");
 
+const isLocalhostOrigin = (origin: string): boolean => {
+  try {
+    const url = new URL(origin);
+    return ["localhost", "127.0.0.1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
 const resolveBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim().length > 0) {
@@ -27,7 +36,11 @@ const resolveBaseUrl = (): string => {
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
-    return `${sanitizeBaseUrl(window.location.origin)}/api`;
+    const origin = sanitizeBaseUrl(window.location.origin);
+    if (isLocalhostOrigin(origin)) {
+      return "http://localhost:8000/api";
+    }
+    return `${origin}/api`;
   }
 
   return "http://localhost:8000/api";
