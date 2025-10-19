@@ -29,10 +29,15 @@ const isLocalhostOrigin = (origin: string): boolean => {
   }
 };
 
+const ensureApiPath = (url: string): string => {
+  const sanitized = sanitizeBaseUrl(url);
+  return sanitized.endsWith("/api") ? sanitized : `${sanitized}/api`;
+};
+
 const resolveBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   if (envUrl && envUrl.trim().length > 0) {
-    return sanitizeBaseUrl(envUrl);
+    return ensureApiPath(envUrl);
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
@@ -40,7 +45,7 @@ const resolveBaseUrl = (): string => {
     if (isLocalhostOrigin(origin)) {
       return "http://localhost:8000/api";
     }
-    return `${origin}/api`;
+    return ensureApiPath(origin);
   }
 
   return "http://localhost:8000/api";
