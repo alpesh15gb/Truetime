@@ -3,6 +3,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app import crud
 from app import db as db_module
 from app import models
 from app.config import Settings
@@ -73,14 +74,17 @@ async def test_default_admin_seed(monkeypatch) -> None:
         async with async_session() as session:
             yield session
 
+    base_settings = Settings(
+        database_url=test_database_url,
+        app_name="Truetime Test API",
+        default_admin_email="seed@example.com",
+        default_admin_password="SeedSecret123!",
+        default_admin_full_name="Primary Administrator",
+        auto_run_migrations=False,
+    )
+
     def override_settings() -> Settings:
-        return Settings(
-            database_url=test_database_url,
-            app_name="Truetime Test API",
-            default_admin_email="seed@example.com",
-            default_admin_password="SeedSecret123!",
-            auto_run_migrations=False,
-        )
+        return base_settings
 
     monkeypatch.setattr("app.config.get_settings", override_settings)
     monkeypatch.setattr(db_module, "engine", async_engine)
@@ -116,6 +120,29 @@ async def test_default_admin_seed(monkeypatch) -> None:
             )
             assert resp.status_code == 200, resp.text
             assert resp.json()["access_token"]
+
+    rotated_settings = base_settings.model_copy(update={"default_admin_password": "SeedSecret456!"})
+
+    def rotated_override_settings() -> Settings:
+        return rotated_settings
+
+    monkeypatch.setattr("app.config.get_settings", rotated_override_settings)
+    monkeypatch.setattr(main_module, "get_settings", rotated_override_settings)
+    monkeypatch.setattr(auth_module, "get_settings", rotated_override_settings)
+    monkeypatch.setattr(security_module, "get_settings", rotated_override_settings)
+
+    async with async_session() as session:
+        await crud.ensure_default_admin(session, rotated_settings)
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(models.User).where(models.User.email == "seed@example.com")
+        )
+        stored_user = result.scalar_one()
+        assert stored_user.full_name == "Primary Administrator"
+        assert stored_user.is_active is True
+        assert stored_user.role.value == "admin"
+        assert verify_password("SeedSecret456!", stored_user.hashed_password)
 
     app.dependency_overrides.clear()
     await async_engine.dispose()

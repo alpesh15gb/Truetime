@@ -176,7 +176,7 @@ All endpoints (except the token endpoint) require a Bearer token issued by `POST
 
 1. The hosted login page now detects whether any users exist. On a fresh installation, it will prompt you to create the first administrator directly from the browser. If the SPA cannot reach your API (for example, when VITE_API_BASE_URL is missing), expand the “Configure backend URL” panel to point the UI at the correct domain and retry the bootstrap. Enter the root of your backend host (for example `https://attendance.example.com` or `https://attendance.example.com/truetime`)—Truetime appends `/api` to that path automatically without stripping intermediate segments. After the admin is created you can provision additional accounts from the `/admin` console.
 
-   *If you prefer to skip the browser bootstrap entirely, populate `TRUETIME_DEFAULT_ADMIN_EMAIL` and `TRUETIME_DEFAULT_ADMIN_PASSWORD` in your backend `.env`. Truetime seeds that account during startup whenever the user table is empty. The sample `.env.example` provisions `admin@truetime.local` / `ChangeMe123!`—update these values before going live.*
+   *If you prefer to skip the browser bootstrap entirely, populate `TRUETIME_DEFAULT_ADMIN_EMAIL` and `TRUETIME_DEFAULT_ADMIN_PASSWORD` in your backend `.env`. Truetime seeds that account during startup whenever the user table is empty. On subsequent startups the API also realigns that user’s password, name, role, and activation state with the values supplied in the environment so you can rotate credentials without CLI access. The sample `.env.example` provisions `admin@truetime.local` / `ChangeMe123!`—update these values before going live.*
 
 2. Alternatively, you can still seed an account via CLI if you prefer:
 

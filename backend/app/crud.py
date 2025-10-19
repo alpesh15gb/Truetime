@@ -10,7 +10,7 @@ from sqlalchemy.orm import joinedload
 
 from . import models, schemas
 from .enums import UserRole
-from .security import get_password_hash
+from .security import get_password_hash, verify_password
 from .config import Settings, get_settings
 
 
@@ -449,14 +449,43 @@ async def users_exist(session: AsyncSession) -> bool:
 
 
 async def ensure_default_admin(session: AsyncSession, settings: Settings) -> None:
-    if await users_exist(session):
-        return
-
     email = (settings.default_admin_email or "").strip().lower()
     password = settings.default_admin_password
     full_name = settings.default_admin_full_name.strip() if settings.default_admin_full_name else "Administrator"
 
     if not email or not password:
+        return
+
+    existing = await get_user_by_email(session, email)
+    if existing:
+        updated = False
+
+        if not verify_password(password, existing.hashed_password):
+            existing.hashed_password = get_password_hash(password)
+            updated = True
+
+        target_name = full_name or "Administrator"
+        if target_name and existing.full_name != target_name:
+            existing.full_name = target_name
+            updated = True
+
+        current_role = existing.role.value if hasattr(existing.role, "value") else existing.role
+        if current_role != UserRole.ADMIN.value:
+            if hasattr(existing.role, "__class__") and hasattr(existing.role.__class__, "__call__"):
+                existing.role = existing.role.__class__(UserRole.ADMIN.value)
+            else:
+                existing.role = UserRole.ADMIN.value
+            updated = True
+
+        if not existing.is_active:
+            existing.is_active = True
+            updated = True
+
+        if updated:
+            await session.commit()
+        return
+
+    if await users_exist(session):
         return
 
     payload = schemas.UserCreate(
