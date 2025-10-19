@@ -12,7 +12,7 @@ from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import api, ingestion
+from . import api, crud, ingestion
 from .config import get_settings
 from .db import AsyncSessionLocal, Base, engine
 
@@ -30,6 +30,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        await crud.ensure_default_admin(session, settings)
 
     task: asyncio.Task | None = None
 

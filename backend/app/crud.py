@@ -11,7 +11,7 @@ from sqlalchemy.orm import joinedload
 from . import models, schemas
 from .enums import UserRole
 from .security import get_password_hash
-from .config import get_settings
+from .config import Settings, get_settings
 
 
 class CRUDException(Exception):
@@ -446,6 +446,30 @@ async def create_user(session: AsyncSession, payload: schemas.UserCreate) -> mod
 async def users_exist(session: AsyncSession) -> bool:
     result = await session.execute(select(func.count(models.User.id)))
     return result.scalar_one() > 0
+
+
+async def ensure_default_admin(session: AsyncSession, settings: Settings) -> None:
+    if await users_exist(session):
+        return
+
+    email = (settings.default_admin_email or "").strip().lower()
+    password = settings.default_admin_password
+    full_name = settings.default_admin_full_name.strip() if settings.default_admin_full_name else "Administrator"
+
+    if not email or not password:
+        return
+
+    payload = schemas.UserCreate(
+        email=email,
+        full_name=full_name or "Administrator",
+        password=password,
+        role=UserRole.ADMIN,
+    )
+
+    try:
+        await create_user(session, payload)
+    except DuplicateError:
+        return
 
 
 async def create_initial_admin(
