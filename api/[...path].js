@@ -74,17 +74,19 @@ const readRequestBody = async (req) => {
 };
 
 const buildTargetUrl = (baseUrl, req) => {
-  const { path } = req.query;
-  const segments = Array.isArray(path)
-    ? path
-    : typeof path === "string"
-    ? [path]
-    : [];
-  const suffix = segments.filter(Boolean).join("/");
-  const searchIndex = req.url ? req.url.indexOf("?") : -1;
-  const query = searchIndex !== -1 ? req.url.slice(searchIndex) : "";
+  const rawUrl = typeof req.url === "string" ? req.url : "";
+  const searchIndex = rawUrl.indexOf("?");
+  const pathname = searchIndex === -1 ? rawUrl : rawUrl.slice(0, searchIndex);
+  const query = searchIndex === -1 ? "" : rawUrl.slice(searchIndex);
 
-  const target = suffix ? `${baseUrl}/${suffix}` : baseUrl;
+  const trimmed = pathname.replace(/^\/+/u, "");
+  let suffix = trimmed;
+
+  if (trimmed.toLowerCase().startsWith("api")) {
+    suffix = trimmed.slice(3).replace(/^\/+/u, "");
+  }
+
+  const target = suffix.length > 0 ? `${baseUrl}/${suffix}` : baseUrl;
   return `${target}${query}`;
 };
 
