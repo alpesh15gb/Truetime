@@ -4,3 +4,7 @@ backend/.env
 __pycache__/
 frontend/node_modules/
 frontend/dist/
+-e 
+# Environment files
+*.env
+*.env.*
