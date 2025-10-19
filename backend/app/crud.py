@@ -485,9 +485,6 @@ async def ensure_default_admin(session: AsyncSession, settings: Settings) -> Non
             await session.commit()
         return
 
-    if await users_exist(session):
-        return
-
     payload = schemas.UserCreate(
         email=email,
         full_name=full_name or "Administrator",

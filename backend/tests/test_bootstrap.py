@@ -9,7 +9,7 @@ from app import models
 from app.config import Settings
 from app.db import Base, get_session
 from app.main import create_app
-from app.security import verify_password
+from app.security import get_password_hash, verify_password
 
 
 @pytest.mark.asyncio
@@ -143,6 +143,27 @@ async def test_default_admin_seed(monkeypatch) -> None:
         assert stored_user.is_active is True
         assert stored_user.role.value == "admin"
         assert verify_password("SeedSecret456!", stored_user.hashed_password)
+
+    # Ensure the default admin is created even when another user already exists
+    async with async_session() as session:
+        other_user = models.User(
+            email="other@example.com",
+            full_name="Other",
+            hashed_password=get_password_hash("dummy"),
+            role=models.UserRoleEnum("manager"),
+        )
+        session.add(other_user)
+        await session.commit()
+
+    async with async_session() as session:
+        await crud.ensure_default_admin(session, base_settings)
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(models.User).where(models.User.email == "seed@example.com")
+        )
+        seeded_user = result.scalar_one()
+        assert verify_password("SeedSecret123!", seeded_user.hashed_password)
 
     app.dependency_overrides.clear()
     await async_engine.dispose()
