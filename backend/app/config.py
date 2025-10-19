@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     secret_key: str = "changeme"
     token_algorithm: str = "HS256"
 
-    default_admin_email: str | None = None
-    default_admin_password: str | None = None
-    default_admin_full_name: str = "Administrator"
+    default_admin_email: str | None = "admin@truetime.local"
+    default_admin_password: str | None = "ChangeMe123!"
+    default_admin_full_name: str = "Primary Administrator"
 
     class Config:
         env_prefix = "TRUETIME_"
