@@ -5,8 +5,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     app_name: str = "Truetime API"
-    # Support both asyncpg (Linux) and psycopg (Windows)
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost/truetime"
+    # Support multiple drivers: asyncpg (Linux), psycopg (Windows), pg8000 (Pure Python - no compilation)
+    database_url: str = "postgresql+pg8000://postgres:postgres@localhost/truetime"
     environment: str = "development"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]
     ingestion_enabled: bool = False
