@@ -1,0 +1,40 @@
+# Latest versions compatible with Python 3.14
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+starlette==0.41.3
+python-multipart==0.0.20
+
+# Database - Latest SQLAlchemy with Python 3.14 support
+sqlalchemy==2.0.36
+alembic==1.14.0
+pg8000==1.31.2
+greenlet==3.1.1
+
+# Authentication & Security - Latest versions
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+PyJWT==2.10.1
+bcrypt==4.2.1
+cryptography==44.0.0
+
+# Pydantic - Latest with Python 3.14 support
+pydantic==2.10.6
+pydantic-settings==2.7.1
+pydantic_core==2.27.2
+
+# Utilities
+python-dotenv==1.0.1
+email-validator==2.2.0
+click==8.1.8
+
+# HTTP & Requests
+httpx==0.28.1
+requests==2.32.3
+
+# Date & Time
+python-dateutil==2.9.0
+pytz==2025.2
+
+# Testing (optional)
+pytest==8.3.4
+pytest-asyncio==0.25.2
